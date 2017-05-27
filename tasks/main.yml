@@ -1,0 +1,75 @@
+---
+# main.yml | SNMP configuration
+
+- name: SNMP | Installed
+  apt: name={{ item }} state=present
+  with_items: 
+    - snmpd 
+    - lm-sensors 
+    - snmp-mibs-downloader
+    - xinetd
+    - libwww-perl
+  notify:
+    - restart snmpd
+
+- name: SNMP | Check if UFW installed
+  command: dpkg-query -l ufw
+  register: ufw_check
+  failed_when: ufw_check.rc > 1
+  changed_when: false
+
+- name: SNMP | Add Agent Port Exception to Firewall
+  ufw: rule=allow proto=tcp direction=in to_port=36602
+  when: ufw_check.rc == 0
+
+- name: SNMP | Configure Observium Agent Directories
+  file:
+    name: /usr/lib/observium_agent
+    state: directory
+    recurse: true
+
+- name: SNMP | Add Agent Scripts
+  copy:
+    src: files/agents/
+    dest: /usr/lib/observium_agent/local
+
+- name: SNMP | Fix Agent Permissions
+  file:
+    path: /usr/lib/observium_agent/local
+    state: directory
+    recurse: yes
+    mode: 0755
+    owner: root
+    group: root
+
+- name: SNMP | Add Xinetd Script
+  copy:
+    src: files/observium_agent_xinetd
+    dest: /etc/xinetd.d/observium_agent_xinetd
+    owner: root
+    group: root
+  notify:
+    - restart xinetd
+
+- name: SNMP | Add Observium Agent
+  copy: 
+    src: files/observium_agent
+    dest: /usr/bin/observium_agent
+    owner: root
+    group: root
+    mode: 0755
+
+- name: SNMP | Configure Defaults
+  template: src=templates/snmpd-default.j2 dest=/etc/default/snmpd force=yes backup=yes
+  notify:
+    - restart snmpd
+
+- name: SNMP | Configure
+  template: src=templates/snmpd.j2 dest=/etc/snmp/snmpd.conf force=yes backup=yes
+  notify:
+    - restart snmpd
+
+- name: Started
+  service:
+    name: snmpd 
+    state: started
