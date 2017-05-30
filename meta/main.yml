@@ -1,0 +1,19 @@
+---
+dependencies: []
+galaxy_info:
+  author: "Andrew Bolster"
+  company: "Sensum Co"
+  description: "Ansible role to install and configure Observium-ready SNMP hosts"
+  license: ISC
+  platforms:
+    - name: Ubuntu
+      versions:
+      - lucid
+      - precise
+      - trusty
+      - utopic
+      - vivid
+  categories:
+    - web
+    - cloud
+    - security
