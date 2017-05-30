@@ -6,14 +6,19 @@
   with_items: 
     - snmpd 
     - lm-sensors 
-    - snmp-mibs-downloader
     - xinetd
     - libwww-perl
   notify:
     - restart snmpd
 
+- name: SNMP | Instal optional packages
+  apt: name={{ item }} state=present
+  with_items: 
+    - snmp-mibs-downloader
+  failed_when: false
+
 - name: SNMP | Check if UFW installed
-  command: dpkg-query -l ufw
+  command: dpkg-query -s ufw
   register: ufw_check
   failed_when: ufw_check.rc > 1
   changed_when: false
@@ -43,21 +48,24 @@
     group: root
 
 - name: SNMP | Add Xinetd Script
-  copy:
-    src: files/observium_agent_xinetd
+  template:
+    src: templates/observium_agent_xinetd.j2
     dest: /etc/xinetd.d/observium_agent_xinetd
     owner: root
     group: root
   notify:
     - restart xinetd
 
-- name: SNMP | Add Observium Agent
+- name: SNMP | Add Observium Agent Scripts
   copy: 
-    src: files/observium_agent
-    dest: /usr/bin/observium_agent
+    src: files/{{ item }}
+    dest: /usr/bin/{{ item }}
     owner: root
     group: root
     mode: 0755
+  with_items:
+    - observium_agent
+    - distro
 
 - name: SNMP | Configure Defaults
   template: src=templates/snmpd-default.j2 dest=/etc/default/snmpd force=yes backup=yes
